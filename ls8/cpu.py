@@ -11,9 +11,13 @@ class CPU:
         self.reg = [0] * 8
         self.pc = 0
         self.ir = 0
+        self.SP = 243
         self.LDI = 0b10000010
         self.PRN = 0b01000111
         self.HLT = 0b00000001
+        self.MUL = 0b10100010
+        self.PUSH = 0b01000101
+        self.POP = 0b01000110
 
     def ram_read(self, address):
         return self.ram[address]
@@ -21,32 +25,35 @@ class CPU:
     def ram_write(self, value, address):
         self.ram[address] = value
 
-    def load(self):
+    def load(self, filename):
         """Load a program into memory."""
-
         address = 0
+        try:
+            with open(filename) as f:
+                for line in f:
+                    comment_split = line.split("#")
+                    n = comment_split[0].strip()
 
-        # For now, we've just hardcoded a program:
+                    if n == '':
+                        continue
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+                    val = int(n, 2)
+                    # store val in memory
+                    self.ram[address] = val
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+                    address += 1
 
+                    # print(f"{x:08b}: {x:d}")
+
+        except FileNotFoundError:
+            print(f"{sys.argv[0]}: {filename} not found")
+            sys.exit(2)
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
         if op == "ADD":
+            print(reg_a)
             self.reg[reg_a] += self.reg[reg_b]
         #elif op == "SUB": etc
         else:
@@ -90,6 +97,30 @@ class CPU:
                 reg_addr = self.ram_read(self.pc + 1)
                 value = self.reg[reg_addr]
                 print(value)
+                self.pc += 2
+
+            elif self.ir == self.MUL:
+                reg_addr_a = self.ram_read(self.pc + 1)
+                reg_addr_b = self.ram_read(self.pc + 2)
+                val1 = self.reg[reg_addr_a]
+                val2 = self.reg[reg_addr_b]
+                value = val1 * val2
+                print(value)
+                self.pc += 2
+
+            elif self.ir == self.PUSH:
+                reg_addr = self.ram_read(self.pc + 1)
+                val = self.reg[reg_addr]
+                self.SP -= 1
+                self.ram[self.SP] = val
+                self.pc += 2
+
+            elif self.ir == self.POP:
+                reg_addr = self.ram_read(self.pc + 1)
+                val = self.ram_read(self.SP)
+                self.reg[reg_addr] = val
+                self.ram[self.SP] = 0
+                self.SP += 1
                 self.pc += 2
 
             elif self.ir == self.HLT:
