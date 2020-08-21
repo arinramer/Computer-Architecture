@@ -13,6 +13,8 @@ class CPU:
         self.ir = 0
         self.SP = 7
         self.reg[7] = 244
+        self.fl = [False] * 8
+        self.E = 0
         self.LDI = 0b10000010
         self.PRN = 0b01000111
         self.HLT = 0b00000001
@@ -22,6 +24,10 @@ class CPU:
         self.CALL = 0b01010000
         self.RET = 0b00010001
         self.ADD = 0b10100000
+        self.CMP = 0b10100111
+        self.JMP = 0b01010100
+        self.JEQ = 0b01010101
+        self.JNE = 0b01010110
 
     def ram_read(self, address):
         return self.ram[address]
@@ -59,7 +65,24 @@ class CPU:
         if op == "ADD":
             print("adding", reg_a)
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "CMP":
+            equal = self.fl[7]
+            greater_than = self.fl[6]
+            less_than = self.fl[5]
+            if self.reg[reg_a] == self.reg[reg_b]:
+                equal = True
+                greater_than = False
+                less_than = False
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                equal = False
+                greater_than = True
+                less_than = False
+            else:
+                equal = False
+                greater_than = False
+                less_than = True
+
+            self.fl[5:] = [less_than, greater_than, equal]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -142,6 +165,32 @@ class CPU:
                 val = self.reg[self.ram[self.pc + 1]] + self.reg[self.ram[self.pc + 2]]
                 self.reg[self.ram[self.pc + 1]] = val
                 self.pc += 3
+
+            elif self.ir == self.CMP:
+                first_reg = self.ram[self.pc + 1]
+                sec_reg = self.ram[self.pc + 2]
+                self.alu('CMP', first_reg, sec_reg)
+                self.pc += 3
+
+            elif self.ir == self.JMP:
+                reg_num = self.ram[self.pc + 1]
+                self.pc = self.reg[reg_num]
+
+            elif self.ir == self.JEQ:
+                reg_to_jump = self.ram[self.pc + 1]
+                addr_to_jump = self.reg[reg_to_jump]
+                if self.fl[7] is True:
+                    self.pc = addr_to_jump
+                else:
+                    self.pc += 2
+
+            elif self.ir == self.JNE:
+                reg_to_jump = self.ram[self.pc + 1]
+                addr_to_jump = self.reg[reg_to_jump]
+                if self.fl[7] is False:
+                    self.pc = addr_to_jump
+                else:
+                    self.pc += 2
 
             elif self.ir == self.HLT:
                 running = False
