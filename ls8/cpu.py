@@ -11,13 +11,17 @@ class CPU:
         self.reg = [0] * 8
         self.pc = 0
         self.ir = 0
-        self.SP = 243
+        self.SP = 7
+        self.reg[7] = 244
         self.LDI = 0b10000010
         self.PRN = 0b01000111
         self.HLT = 0b00000001
         self.MUL = 0b10100010
         self.PUSH = 0b01000101
         self.POP = 0b01000110
+        self.CALL = 0b01010000
+        self.RET = 0b00010001
+        self.ADD = 0b10100000
 
     def ram_read(self, address):
         return self.ram[address]
@@ -53,7 +57,7 @@ class CPU:
         """ALU operations."""
 
         if op == "ADD":
-            print(reg_a)
+            print("adding", reg_a)
             self.reg[reg_a] += self.reg[reg_b]
         #elif op == "SUB": etc
         else:
@@ -122,6 +126,22 @@ class CPU:
                 self.ram[self.SP] = 0
                 self.SP += 1
                 self.pc += 2
+
+            elif self.ir == self.CALL:
+                self.reg[self.SP] -= 1
+                self.ram[self.reg[self.SP]] = self.pc + 2
+                reg = self.ram[self.pc + 1]
+                self.pc = self.reg[reg]
+                
+
+            elif self.ir == self.RET:
+                self.pc = self.ram[self.reg[self.SP]]
+                self.reg[self.SP] += 1
+
+            elif self.ir == self.ADD:
+                val = self.reg[self.ram[self.pc + 1]] + self.reg[self.ram[self.pc + 2]]
+                self.reg[self.ram[self.pc + 1]] = val
+                self.pc += 3
 
             elif self.ir == self.HLT:
                 running = False
